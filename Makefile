@@ -141,3 +141,9 @@ build-ubuntu:
 	@echo "===> Building Antrea bins and antrea-ubuntu Docker image <==="
 	docker build -t antrea-ubuntu -f build/images/Dockerfile.build.ubuntu .
 	docker tag antrea-ubuntu antrea-ubuntu:$(DOCKER_IMG_VERSION)
+
+.PHONY: antrea-octant-ubuntu
+antrea-octant-ubuntu:
+	@echo "===> Building antrea-octant-plugin and octant Docker image <==="
+	docker build -t antrea-octant -f build/images/Dockerfile.octant.ubuntu .
+	docker tag antrea-octant antrea-octant:$(DOCKER_IMG_VERSION)
