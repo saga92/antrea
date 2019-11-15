@@ -43,9 +43,10 @@ $(DOCKER_CACHE):
 	@mkdir -p $@/gocache
 
 DOCKER_ENV := \
-	@docker run --rm \
+	docker run --rm \
 		-e "GOCACHE=/tmp/gocache" \
 		-e "GOPATH=/tmp/gopath" \
+		-e "GOPROXY=$$(go env GOPROXY)" \
 		-w /usr/src/github.com/vmware-tanzu/antrea \
 		-v $(DOCKER_CACHE)/gopath:/tmp/gopath \
 		-v $(DOCKER_CACHE)/gocache:/tmp/gocache \
@@ -62,7 +63,9 @@ docker-test-unit: $(DOCKER_CACHE)
 
 .PHONY: docker-tidy
 docker-tidy: $(DOCKER_CACHE)
+	@rm -f go.sum
 	@$(DOCKER_ENV) go mod tidy
+	@chown $$(id -u):$$(id -g) go.mod go.sum
 
 .PHONY: .linux-bin
 .linux-bin:
@@ -76,6 +79,7 @@ docker-tidy: $(DOCKER_CACHE)
 
 .PHONY: tidy
 tidy:
+	@rm -f go.sum
 	@$(GO) mod tidy
 
 .PHONY: .linux-test-integration
@@ -89,6 +93,11 @@ test-fmt:
 	@echo
 	@echo "===> Checking format of Go files <==="
 	@test -z "$$(gofmt -s -l -d $(GO_FILES) | tee /dev/stderr)"
+
+test-tidy:
+	@echo
+	@echo "===> Checking go.mod tidiness <==="
+	@$(CURDIR)/hack/tidy-check.sh
 
 .PHONY: fmt
 fmt:
