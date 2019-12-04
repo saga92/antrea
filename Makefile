@@ -5,7 +5,6 @@ GOFLAGS         :=
 BINDIR          := $(CURDIR)/bin
 GO_FILES        := $(shell find . -type d -name '.cache' -prune -o -type f -name '*.go' -print)
 GOPATH          ?= $$(go env GOPATH)
-GOPROXY         ?= $$(go env GOPROXY)
 DOCKER_CACHE    := $(CURDIR)/.cache
 
 .PHONY: all
@@ -49,7 +48,6 @@ DOCKER_ENV := \
 	@docker run --rm -u $$(id -u):$$(id -g) \
 		-e "GOCACHE=/tmp/gocache" \
 		-e "GOPATH=/tmp/gopath" \
-		-e "GOPROXY=$(GOPROXY)" \
 		-w /usr/src/github.com/vmware-tanzu/antrea \
 		-v $(DOCKER_CACHE)/gopath:/tmp/gopath \
 		-v $(DOCKER_CACHE)/gocache:/tmp/gocache \
@@ -81,7 +79,7 @@ docker-tidy: $(DOCKER_CACHE)
 .linux-test-unit:
 	@echo
 	@echo "==> Running unit tests <=="
-	$(GO) test -cover github.com/vmware-tanzu/antrea/pkg/...
+	$(GO) test -race -cover github.com/vmware-tanzu/antrea/pkg/...
 
 .PHONY: tidy
 tidy:
@@ -116,9 +114,17 @@ fmt:
 	@echo "===> Formatting Go files <==="
 	@gofmt -s -l -w $(GO_FILES)
 
+.PHONY: .linter
+.linter:
+	@if ! PATH=$$PATH:$(GOPATH)/bin command -v golint > /dev/null; then \
+	  echo "===> Installing Golint <==="; \
+	  go get -u golang.org/x/lint/golint; \
+	fi
+
 .PHONY: lint
-lint:
-	golint $$(go list ./...)
+lint: export GOOS=linux
+lint: .linter
+	@PATH=$$PATH:$(GOPATH)/bin golint ./cmd/... ./pkg/...
 
 .PHONY: clean
 clean:
